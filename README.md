@@ -66,7 +66,8 @@ Aceita **OFX** (Itaú, Bradesco, Santander, BB, Caixa e a maioria dos bancos) e 
 1. O arquivo é lido no navegador (UTF-8 ou Windows-1252, comum em bancos brasileiros) e enviado só para a API local.
 2. Cada transação recebe uma categoria automática pelas palavras-chave das categorias (ex.: "Uber" → Transporte, "Drogasil" → Saúde). Palavras curtas precisam ser palavra inteira ("tim" não pega "Timbó") e a mais específica vence ("mercadolivre" → Compras, não Alimentação).
 3. A prévia permite desmarcar linhas e trocar categorias antes de salvar.
-4. Transações já importadas são reconhecidas pelo `FITID` do OFX ou por um hash de data + valor + descrição, então importar o mesmo extrato duas vezes não duplica nada.
+4. Para testar, use os extratos **fictícios** em [`exemplos/`](exemplos/): um CSV no formato Nubank e um OFX de banco tradicional.
+5. Transações já importadas são reconhecidas pelo `FITID` do OFX ou por um hash de data + valor + descrição, então importar o mesmo extrato duas vezes não duplica nada.
 
 ## Decisões técnicas
 

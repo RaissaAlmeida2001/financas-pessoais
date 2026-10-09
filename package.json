@@ -5,7 +5,7 @@
   "description": "App de finanças pessoais: React + Node.js (Express) + SQLite",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -n api,web -c magenta,cyan \"node --watch server/index.js\" \"vite\"",
+    "dev": "concurrently -n api,web -c magenta,cyan \"node --watch-path=server --watch-preserve-output server/index.js\" \"vite\"",
     "build": "vite build",
     "start": "node server/index.js",
     "seed": "node server/seed.js",
