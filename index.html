@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/icone.svg" />
     <title>Finanças Pessoais</title>
+    <script>
+      // aplica o tema salvo antes de desenhar a página (evita piscar)
+      try { if (localStorage.getItem('tema') === 'escuro') document.documentElement.dataset.theme = 'escuro' } catch {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

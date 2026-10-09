@@ -3,9 +3,14 @@
 import express from 'express'
 import { CATEGORIAS } from './db.js'
 import { validarTransacao, MES_REGEX } from './validacao.js'
+import { lerExtrato } from './importacao.js'
+
+const MAX_IMPORTACAO = 5000
 
 export function criarApp(repo) {
   const app = express()
+  // extratos podem ser grandes; o resto da API aceita só corpos pequenos
+  app.use('/api/importacao', express.json({ limit: '5mb' }))
   app.use(express.json({ limit: '10kb' }))
 
   const api = express.Router()
@@ -72,6 +77,32 @@ export function criarApp(repo) {
     if (!MES_REGEX.test(ate ?? '')) return res.status(400).json({ erro: 'Parâmetro "ate" deve estar no formato AAAA-MM.' })
     const meses = Math.min(Math.max(Number(req.query.meses) || 6, 1), 24)
     res.json(repo.evolucao(ate, meses))
+  })
+
+  // 1º passo: lê o arquivo e devolve a prévia (nada é salvo ainda)
+  api.post('/importacao/previa', (req, res) => {
+    const resultado = lerExtrato(req.body?.conteudo)
+    if (resultado.erro) return res.status(400).json({ erro: resultado.erro })
+    const transacoes = resultado.transacoes.slice(0, MAX_IMPORTACAO).map(t => ({ ...t, duplicada: repo.jaImportada(t.idExterno) }))
+    res.json({ formato: resultado.formato, transacoes, total: resultado.transacoes.length })
+  })
+
+  // 2º passo: salva as transações que a pessoa confirmou (já revisadas na prévia)
+  api.post('/importacao', (req, res) => {
+    const lista = req.body?.transacoes
+    if (!Array.isArray(lista) || lista.length === 0) return res.status(400).json({ erro: 'Nenhuma transação pra importar.' })
+    if (lista.length > MAX_IMPORTACAO) return res.status(400).json({ erro: `Importe no máximo ${MAX_IMPORTACAO} por vez.` })
+
+    const validas = []
+    for (const [i, item] of lista.entries()) {
+      const { dados, erros } = validarTransacao(item)
+      if (Object.keys(erros).length) return res.status(400).json({ erro: `Linha ${i + 1}: ${Object.values(erros)[0]}` })
+      if (typeof item.idExterno !== 'string' || !/^(ofx|hash):[\w.\-:]{1,120}$/.test(item.idExterno)) {
+        return res.status(400).json({ erro: `Linha ${i + 1}: identificador inválido.` })
+      }
+      validas.push({ ...dados, idExterno: item.idExterno })
+    }
+    res.status(201).json(repo.importar(validas))
   })
 
   app.use('/api', api)

@@ -1,48 +1,48 @@
-/* Tokens de design — claro e escuro. Paleta dos gráficos validada pra daltonismo
-   (azul/laranja, ΔE CVD ≥ 24 nos dois modos). */
+/* Tokens de design. Claro por padrão; o escuro é azul-marinho (botão no topo).
+   Cores dos gráficos validadas pra daltonismo nos dois fundos (azul/laranja, ΔE CVD ≥ 24). */
 :root {
   color-scheme: light;
-  --pagina: #f9f9f7;
-  --superficie: #fcfcfb;
-  --superficie-2: #f3f2ef;
-  --texto: #0b0b0b;
-  --texto-2: #52514e;
-  --texto-mudo: #6f6d68;
-  --grade: #e1e0d9;
-  --eixo: #c3c2b7;
-  --borda: rgba(11, 11, 11, 0.1);
+  --pagina: #f5f7fb;
+  --superficie: #ffffff;
+  --superficie-2: #eef2f8;
+  --texto: #0f172a;
+  --texto-2: #475569;
+  --texto-mudo: #64748b;
+  --grade: #e2e8f0;
+  --eixo: #cbd5e1;
+  --borda: rgba(15, 23, 42, 0.1);
   --destaque: #2a78d6;
   --destaque-texto: #ffffff;
   --serie-receita: #2a78d6;
   --serie-despesa: #eb6834;
-  --positivo: #006300;
+  --positivo: #0a6b2c;
   --negativo: #b42828;
   --foco: #2a78d6;
-  --sombra: 0 1px 2px rgba(11, 11, 11, 0.06);
+  --sombra: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
+  --veu: rgba(15, 23, 42, 0.45);
   --raio: 10px;
   --fonte: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:where(:not([data-theme='light'])) {
-    color-scheme: dark;
-    --pagina: #0d0d0d;
-    --superficie: #1a1a19;
-    --superficie-2: #232322;
-    --texto: #ffffff;
-    --texto-2: #c3c2b7;
-    --texto-mudo: #9c9a93;
-    --grade: #2c2c2a;
-    --eixo: #383835;
-    --borda: rgba(255, 255, 255, 0.1);
-    --destaque: #3987e5;
-    --serie-receita: #3987e5;
-    --serie-despesa: #d95926;
-    --positivo: #2dbb2d;
-    --negativo: #f07070;
-    --foco: #6da7ec;
-    --sombra: none;
-  }
+:root[data-theme='escuro'] {
+  color-scheme: dark;
+  --pagina: #0f1729;
+  --superficie: #1a2338;
+  --superficie-2: #232e48;
+  --texto: #e8edf6;
+  --texto-2: #b4bfd3;
+  --texto-mudo: #8b97ad;
+  --grade: #26314b;
+  --eixo: #35425f;
+  --borda: rgba(255, 255, 255, 0.08);
+  --destaque: #3987e5;
+  --serie-receita: #3987e5;
+  --serie-despesa: #d95926;
+  --positivo: #4ade80;
+  --negativo: #f87171;
+  --foco: #6da7ec;
+  --sombra: none;
+  --veu: rgba(5, 10, 20, 0.7);
 }
 
 * { box-sizing: border-box; }
@@ -233,3 +233,46 @@ tbody tr:hover { background: var(--superficie-2); }
 .barras-h.com-hover .barra-h:not(.ativa) .barra-h-preenche { opacity: .55; }
 .barra-h-valor { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; min-width: 92px; }
 .barra-h-valor small { display: block; font-weight: 400; color: var(--texto-mudo); font-size: .78rem; }
+
+/* ——— topo: ações ——— */
+.topo-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+/* ——— importação de extrato ——— */
+.modal {
+  width: min(960px, calc(100vw - 32px)); max-height: calc(100vh - 48px);
+  padding: 0; border: 1px solid var(--borda); border-radius: 14px;
+  background: var(--superficie); color: var(--texto);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .25);
+}
+.modal::backdrop { background: var(--veu); }
+.modal-conteudo { display: flex; flex-direction: column; max-height: calc(100vh - 50px); }
+.modal-topo { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--grade); }
+.modal-topo h2 { margin: 0; font-size: 1.1rem; }
+.modal-corpo { padding: 20px; overflow: auto; }
+.modal-rodape { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 20px; border-top: 1px solid var(--grade); }
+
+.zona-arquivo {
+  display: grid; place-items: center; gap: 6px; text-align: center;
+  border: 2px dashed var(--eixo); border-radius: 12px; padding: 36px 16px; cursor: pointer;
+  color: var(--texto-2);
+}
+.zona-arquivo.arrastando, .zona-arquivo:hover { border-color: var(--destaque); background: var(--superficie-2); }
+.zona-arquivo strong { color: var(--texto); font-size: 1.05rem; }
+.dica-bancos { margin: 16px 0 0; font-size: .85rem; color: var(--texto-2); }
+.dica-bancos summary { cursor: pointer; font-weight: 600; color: var(--texto); }
+.dica-bancos ul { margin: 8px 0 0; padding-left: 18px; line-height: 1.6; }
+.aviso-privacidade { font-size: .8rem; color: var(--texto-mudo); margin: 12px 0 0; }
+
+.resumo-importacao { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 12px; color: var(--texto-2); font-size: .9rem; }
+.resumo-importacao b { color: var(--texto); }
+.tabela-importacao td { padding: 6px 8px; }
+.tabela-importacao select { padding: 5px 6px; border-radius: 6px; border: 1px solid var(--eixo); background: var(--superficie); max-width: 150px; }
+.tabela-importacao tr.desmarcada td:not(:first-child) { opacity: .45; }
+.tabela-importacao .descricao-import { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.etiqueta-dup { background: var(--superficie-2); color: var(--texto-mudo); font-size: .72rem; margin-left: 6px; }
+input[type='checkbox'] { width: 16px; height: 16px; accent-color: var(--destaque); cursor: pointer; }
+.aviso-sucesso {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  border: 1px solid var(--positivo); color: var(--positivo); background: var(--superficie);
+  border-radius: var(--raio); padding: 8px 8px 8px 14px; margin: 0 0 16px; font-weight: 600;
+}

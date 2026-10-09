@@ -6,6 +6,8 @@ import FormTransacao from './components/FormTransacao.jsx'
 import TabelaTransacoes from './components/TabelaTransacoes.jsx'
 import GraficoCategorias from './components/GraficoCategorias.jsx'
 import GraficoEvolucao from './components/GraficoEvolucao.jsx'
+import ModalImportar from './components/ModalImportar.jsx'
+import BotaoTema from './components/BotaoTema.jsx'
 
 export default function App() {
   const [mes, setMes] = useState(mesAtual)
@@ -16,6 +18,8 @@ export default function App() {
   const [editando, setEditando] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
+  const [importando, setImportando] = useState(false)
+  const [aviso, setAviso] = useState('')
 
   useEffect(() => {
     api.categorias().then(setCategorias).catch(e => setErro(e.message))
@@ -61,6 +65,16 @@ export default function App() {
     }
   }
 
+  async function aposImportar({ importadas, ignoradas }, mesMaisRecente) {
+    setImportando(false)
+    setAviso(
+      `${importadas} ${importadas === 1 ? 'transação importada' : 'transações importadas'}` +
+        (ignoradas ? ` · ${ignoradas} já existiam e foram ignoradas` : '') + '.'
+    )
+    if (mesMaisRecente && mesMaisRecente !== mes) setMes(mesMaisRecente)
+    else await carregar()
+  }
+
   return (
     <div className="app">
       <header className="topo">
@@ -68,13 +82,23 @@ export default function App() {
           <h1>Finanças Pessoais</h1>
           <p>Controle de receitas e despesas</p>
         </div>
-        <nav className="seletor-mes" aria-label="Escolher mês">
-          <button className="botao botao-icone" onClick={() => setMes(m => somarMeses(m, -1))} aria-label="Mês anterior">‹</button>
-          <output aria-live="polite">{nomeMes(mes)}</output>
-          <button className="botao botao-icone" onClick={() => setMes(m => somarMeses(m, 1))} aria-label="Próximo mês">›</button>
-          {mes !== mesAtual() && <button className="botao botao-texto" onClick={() => setMes(mesAtual())}>Hoje</button>}
-        </nav>
+        <div className="topo-acoes">
+          <nav className="seletor-mes" aria-label="Escolher mês">
+            <button className="botao botao-icone" onClick={() => setMes(m => somarMeses(m, -1))} aria-label="Mês anterior">‹</button>
+            <output aria-live="polite">{nomeMes(mes)}</output>
+            <button className="botao botao-icone" onClick={() => setMes(m => somarMeses(m, 1))} aria-label="Próximo mês">›</button>
+            {mes !== mesAtual() && <button className="botao botao-texto" onClick={() => setMes(mesAtual())}>Hoje</button>}
+          </nav>
+          <button className="botao botao-primario" onClick={() => { setAviso(''); setImportando(true) }}>Importar extrato</button>
+          <BotaoTema />
+        </div>
       </header>
+
+      {aviso && (
+        <p className="aviso-sucesso" role="status">
+          {aviso} <button className="botao botao-texto" onClick={() => setAviso('')} aria-label="Fechar aviso">✕</button>
+        </p>
+      )}
 
       {erro && <p className="aviso-erro" role="alert">{erro} Confira se a API está rodando (npm run dev).</p>}
 
@@ -96,6 +120,13 @@ export default function App() {
           </div>
         </div>
       </main>
+
+      <ModalImportar
+        aberto={importando}
+        categorias={categorias}
+        onFechar={() => setImportando(false)}
+        onImportado={aposImportar}
+      />
     </div>
   )
 }
