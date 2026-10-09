@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../api.js'
+import { NOMES_CORES, varCor } from '../utils.js'
 
-const VAZIO = { nome: '', palavras: '' }
+const VAZIO = { nome: '', palavras: '', cor: null }
 
 // Linha em modo edição (nome + palavras-chave)
-function EditorCategoria({ inicial, fixa, rotuloSalvar, onSalvar, onCancelar }) {
+function EditorCategoria({ inicial, fixa, cores, rotuloSalvar, onSalvar, onCancelar }) {
   const [form, setForm] = useState(inicial)
   const [erros, setErros] = useState({})
   const [salvando, setSalvando] = useState(false)
@@ -13,7 +14,7 @@ function EditorCategoria({ inicial, fixa, rotuloSalvar, onSalvar, onCancelar }) 
     e.preventDefault()
     setSalvando(true)
     try {
-      await onSalvar({ nome: form.nome, palavrasChave: form.palavras })
+      await onSalvar({ nome: form.nome, palavrasChave: form.palavras, cor: form.cor })
       setErros({})
       if (!onCancelar) setForm(VAZIO) // formulário de "nova categoria" limpa depois de salvar
     } catch (erro) {
@@ -37,6 +38,16 @@ function EditorCategoria({ inicial, fixa, rotuloSalvar, onSalvar, onCancelar }) 
           aria-invalid={erros.palavrasChave ? 'true' : undefined} onChange={e => setForm(f => ({ ...f, palavras: e.target.value }))} />
         {erros.palavrasChave && <p className="campo-erro">{erros.palavrasChave}</p>}
       </div>
+      <fieldset className="seletor-cor">
+        <legend>Cor {!form.cor && <small>(automática se não escolher)</small>}</legend>
+        {cores.map(c => (
+          <label key={c} className="amostra-cor" style={{ background: varCor(c) }} title={NOMES_CORES[c]}>
+            <input type="radio" name={`cor-${rotuloSalvar}`} value={c} checked={form.cor === c}
+              onChange={() => setForm(f => ({ ...f, cor: c }))} aria-label={NOMES_CORES[c]} />
+          </label>
+        ))}
+      </fieldset>
+      {erros.cor && <p className="campo-erro">{erros.cor}</p>}
       {erros.geral && <p className="campo-erro">{erros.geral}</p>}
       <div className="form-acoes">
         <button className="botao botao-primario" type="submit" disabled={salvando}>{salvando ? 'Salvando…' : rotuloSalvar}</button>
@@ -50,12 +61,15 @@ export default function ModalCategorias({ aberto, tipoInicial = 'despesa', onFec
   const dialogo = useRef(null)
   const [tipo, setTipo] = useState(tipoInicial)
   const [lista, setLista] = useState([])
+  const [cores, setCores] = useState([])
   const [editandoId, setEditandoId] = useState(null)
   const [erro, setErro] = useState('')
 
   async function carregar() {
     try {
-      setLista(await api.categoriasDetalhes())
+      const [l, c] = await Promise.all([api.categoriasDetalhes(), api.cores()])
+      setLista(l)
+      setCores(c)
     } catch (e) {
       setErro(e.message)
     }
@@ -122,7 +136,7 @@ export default function ModalCategorias({ aberto, tipoInicial = 'despesa', onFec
 
           <section className="nova-categoria" aria-label="Nova categoria">
             <h3>Nova categoria de {tipo}</h3>
-            <EditorCategoria key={tipo} inicial={VAZIO} rotuloSalvar="Adicionar" onSalvar={criar} />
+            <EditorCategoria key={tipo} inicial={VAZIO} cores={cores} rotuloSalvar="Adicionar" onSalvar={criar} />
           </section>
 
           {erro && <p className="form-erro-geral" role="alert">{erro}</p>}
@@ -132,8 +146,9 @@ export default function ModalCategorias({ aberto, tipoInicial = 'despesa', onFec
               <li key={c.id}>
                 {editandoId === c.id ? (
                   <EditorCategoria
-                    inicial={{ nome: c.nome, palavras: c.palavrasChave.join(', ') }}
+                    inicial={{ nome: c.nome, palavras: c.palavrasChave.join(', '), cor: c.cor }}
                     fixa={c.fixa}
+                    cores={cores}
                     rotuloSalvar="Salvar"
                     onSalvar={dados => salvar(c, dados)}
                     onCancelar={() => setEditandoId(null)}
@@ -141,7 +156,7 @@ export default function ModalCategorias({ aberto, tipoInicial = 'despesa', onFec
                 ) : (
                   <div className="linha-categoria">
                     <div className="linha-categoria-info">
-                      <strong>{c.nome}</strong>
+                      <strong><i className="ponto-cor" style={{ background: varCor(c.cor) }} aria-hidden="true" />{c.nome}</strong>
                       <small>
                         {c.uso} {c.uso === 1 ? 'transação' : 'transações'}
                         {c.fixa && ' · padrão para o que não tem categoria'}

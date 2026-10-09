@@ -23,7 +23,24 @@ export default function App() {
   const [aviso, setAviso] = useState('')
   const [gerenciarCategorias, setGerenciarCategorias] = useState(null) // null | 'receita' | 'despesa'
 
-  const carregarCategorias = useCallback(() => api.categorias().then(setCategorias).catch(e => setErro(e.message)), [])
+  const [coresCategorias, setCoresCategorias] = useState({}) // "despesa:Lazer" -> "rosa"
+
+  // nomes (pro formulário/validação) e cores (pros gráficos e tabela) vêm da mesma lista
+  const carregarCategorias = useCallback(async () => {
+    try {
+      const lista = await api.categoriasDetalhes()
+      const nomes = { receita: [], despesa: [] }
+      const cores = {}
+      for (const c of lista) {
+        nomes[c.tipo].push(c.nome)
+        cores[`${c.tipo}:${c.nome}`] = c.cor
+      }
+      setCategorias(nomes)
+      setCoresCategorias(cores)
+    } catch (e) {
+      setErro(e.message)
+    }
+  }, [])
   useEffect(() => { carregarCategorias() }, [carregarCategorias])
 
   // Recarrega tudo que depende do mês. Os dados anteriores ficam na tela (mais claros)
@@ -118,8 +135,8 @@ export default function App() {
           />
           <div className="coluna-graficos">
             <GraficoEvolucao dados={evolucao} mesSelecionado={mes} />
-            <GraficoCategorias dados={resumo?.porCategoria ?? []} />
-            <TabelaTransacoes transacoes={transacoes} onEditar={setEditando} onRemover={remover} />
+            <GraficoCategorias dados={resumo?.porCategoria ?? []} cores={coresCategorias} />
+            <TabelaTransacoes transacoes={transacoes} cores={coresCategorias} onEditar={setEditando} onRemover={remover} />
           </div>
         </div>
       </main>

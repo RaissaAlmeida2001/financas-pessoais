@@ -20,6 +20,16 @@
   --foco: #2a78d6;
   --sombra: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
   --veu: rgba(15, 23, 42, 0.45);
+  /* cores das categorias — paleta validada pra daltonismo */
+  --cat-azul: #2a78d6;
+  --cat-laranja: #eb6834;
+  --cat-verde-agua: #1baf7a;
+  --cat-amarelo: #eda100;
+  --cat-rosa: #e87ba4;
+  --cat-verde: #008300;
+  --cat-violeta: #4a3aa7;
+  --cat-vermelho: #e34948;
+  --cat-cinza: #8b95a7;
   --raio: 10px;
   --fonte: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
@@ -43,6 +53,15 @@
   --foco: #6da7ec;
   --sombra: none;
   --veu: rgba(5, 10, 20, 0.7);
+  --cat-azul: #3987e5;
+  --cat-laranja: #d95926;
+  --cat-verde-agua: #199e70;
+  --cat-amarelo: #c98500;
+  --cat-rosa: #d55181;
+  --cat-verde: #008300;
+  --cat-violeta: #9085e9;
+  --cat-vermelho: #e66767;
+  --cat-cinza: #7c879b;
 }
 
 * { box-sizing: border-box; }
@@ -292,3 +311,21 @@ input[type='checkbox'] { width: 16px; height: 16px; accent-color: var(--destaque
 .palavras { display: flex; flex-wrap: wrap; gap: 4px; }
 .rotulo-com-acao { display: flex; justify-content: space-between; align-items: center; }
 .botao-mini { font-size: .8rem; padding: 2px 6px; color: var(--destaque); }
+
+/* ——— cores das categorias ——— */
+.ponto-cor { display: inline-block; width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.etiqueta-cat { display: inline-flex; align-items: center; gap: 6px; }
+.seletor-cor { display: flex; flex-wrap: wrap; gap: 8px; border: 0; padding: 0; margin: 0; }
+.seletor-cor legend { font-size: .85rem; font-weight: 600; color: var(--texto-2); margin-bottom: 6px; padding: 0; }
+.amostra-cor {
+  width: 28px; height: 28px; border-radius: 8px; cursor: pointer; position: relative;
+  border: 2px solid transparent; outline-offset: 2px;
+}
+.amostra-cor input { position: absolute; inset: 0; opacity: 0; cursor: pointer; margin: 0; }
+.amostra-cor:has(input:checked) { border-color: var(--superficie); box-shadow: 0 0 0 2px var(--texto); }
+.amostra-cor:has(input:focus-visible) { outline: 2px solid var(--foco); }
+.amostra-cor:has(input:checked)::after {
+  content: '✓'; position: absolute; inset: 0; display: grid; place-items: center;
+  color: #fff; font-weight: 700; font-size: .85rem; text-shadow: 0 1px 2px rgba(0, 0, 0, .5);
+}
+.linha-categoria-info strong { display: inline-flex; align-items: center; gap: 8px; }

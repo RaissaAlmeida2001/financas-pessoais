@@ -1,7 +1,7 @@
 // Rotas da API. Recebe o repositório por parâmetro pra facilitar os testes
 // (nos testes usamos um banco em memória).
 import express from 'express'
-import { CATEGORIA_FIXA } from './db.js'
+import { CATEGORIA_FIXA, CORES } from './db.js'
 import { validarTransacao, validarCategoria, MES_REGEX } from './validacao.js'
 import { lerExtrato } from './importacao.js'
 
@@ -37,6 +37,7 @@ export function criarApp(repo) {
   // ——— categorias ———
   api.get('/categorias', (_req, res) => res.json(repo.nomesCategorias()))
   api.get('/categorias/detalhes', (_req, res) => res.json(repo.listarCategorias()))
+  api.get('/categorias/cores', (_req, res) => res.json(CORES))
 
   api.post('/categorias', (req, res) => {
     const { dados, erros } = validarCategoria(req.body, { exigirTipo: true })

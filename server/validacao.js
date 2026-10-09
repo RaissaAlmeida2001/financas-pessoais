@@ -1,3 +1,5 @@
+import { CORES } from './db.js'
+
 export const MES_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/
 
 function dataValida(texto) {
@@ -60,5 +62,8 @@ export function validarCategoria(corpo, { exigirTipo }) {
     else if (palavrasChave.some(p => p.length < 2 || p.length > 40)) erros.palavrasChave = 'Cada palavra-chave precisa ter de 2 a 40 caracteres.'
   }
 
-  return { erros, dados: { tipo, nome, palavrasChave } }
+  const cor = entrada.cor ?? null
+  if (cor !== null && !CORES.includes(cor)) erros.cor = 'Escolha uma das cores disponíveis.'
+
+  return { erros, dados: { tipo, nome, palavrasChave, cor } }
 }

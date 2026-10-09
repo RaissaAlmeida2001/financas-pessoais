@@ -72,6 +72,24 @@ test('renomear atualiza as transações; excluir manda pra "Outros"', async () =
   assert.equal(t.status, 400)
 })
 
+test('cores: padrão em ordem, "Outros" cinza, nova pega a menos usada, cor inválida é recusada', async () => {
+  const lista = await (await req('GET', '/categorias/detalhes')).json()
+  const despesas = lista.filter(c => c.tipo === 'despesa')
+  assert.equal(despesas[0].cor, 'azul')
+  assert.equal(despesas[1].cor, 'laranja')
+  assert.equal(despesas.find(c => c.nome === 'Outros').cor, 'cinza')
+
+  const nova = await (await req('POST', '/categorias', { tipo: 'despesa', nome: 'Assinaturas' })).json()
+  const usadas = despesas.filter(c => c.cor !== 'cinza').map(c => c.cor)
+  assert.ok(!usadas.includes(nova.cor) || usadas.length >= 8)
+
+  const escolhida = await (await req('POST', '/categorias', { tipo: 'despesa', nome: 'Viagens', cor: 'rosa' })).json()
+  assert.equal(escolhida.cor, 'rosa')
+  assert.equal((await req('PUT', `/categorias/${escolhida.id}`, { nome: 'Viagens', cor: 'violeta' })).status, 200)
+  assert.equal((await req('PUT', `/categorias/${escolhida.id}`, { nome: 'Viagens', cor: '#ff0000' })).status, 400)
+  assert.equal((await req('POST', '/categorias', { tipo: 'despesa', nome: 'X', cor: 'dourado' })).status, 400)
+})
+
 test('"Outros" não pode ser excluída nem renomeada', async () => {
   const outros = (await (await req('GET', '/categorias/detalhes')).json()).find(c => c.nome === 'Outros')
   assert.equal((await req('DELETE', `/categorias/${outros.id}`)).status, 400)

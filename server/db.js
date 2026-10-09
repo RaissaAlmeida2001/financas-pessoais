@@ -29,6 +29,11 @@ export const CATEGORIAS_PADRAO = {
 // transações de uma categoria excluída.
 export const CATEGORIA_FIXA = 'Outros'
 
+// Cores disponíveis pras categorias (o hex de cada uma, claro/escuro, fica no CSS).
+// Paleta validada pra daltonismo; "cinza" é a cor padrão de "Outros".
+export const CORES = ['azul', 'laranja', 'verde-agua', 'amarelo', 'rosa', 'verde', 'violeta', 'vermelho', 'cinza']
+const CORES_ROTATIVAS = CORES.slice(0, 8)
+
 export function abrirBanco(caminho = 'data/financas.db') {
   if (caminho !== ':memory:') mkdirSync(dirname(caminho), { recursive: true })
   const db = new DatabaseSync(caminho)
@@ -66,6 +71,18 @@ export function abrirBanco(caminho = 'data/financas.db') {
     for (const [tipo, lista] of Object.entries(CATEGORIAS_PADRAO)) {
       for (const [nome, palavras] of lista) inserir.run(tipo, nome, palavras, 0)
       inserir.run(tipo, CATEGORIA_FIXA, '', 1)
+    }
+  }
+
+  // migração: cor de cada categoria. As que ainda não têm recebem as cores em ordem.
+  const colunasCat = db.prepare('PRAGMA table_info(categorias)').all().map(c => c.name)
+  if (!colunasCat.includes('cor')) db.exec('ALTER TABLE categorias ADD COLUMN cor TEXT')
+  const semCor = db.prepare('SELECT id, tipo, fixa FROM categorias WHERE cor IS NULL ORDER BY tipo, id').all()
+  if (semCor.length) {
+    const definir = db.prepare('UPDATE categorias SET cor = ? WHERE id = ?')
+    const contador = { receita: 0, despesa: 0 }
+    for (const c of semCor) {
+      definir.run(c.fixa ? 'cinza' : CORES_ROTATIVAS[contador[c.tipo]++ % CORES_ROTATIVAS.length], c.id)
     }
   }
 
@@ -119,15 +136,16 @@ export function criarRepositorio(db) {
     `),
     existeExterno: db.prepare('SELECT 1 FROM transacoes WHERE id_externo = ?'),
     categorias: db.prepare(`
-      SELECT c.id, c.tipo, c.nome, c.palavras_chave, c.fixa,
+      SELECT c.id, c.tipo, c.nome, c.palavras_chave, c.fixa, c.cor,
              (SELECT COUNT(*) FROM transacoes t WHERE t.tipo = c.tipo AND t.categoria = c.nome) AS uso
       FROM categorias c
       ORDER BY c.tipo, c.fixa, c.id
     `),
     categoria: db.prepare('SELECT * FROM categorias WHERE id = ?'),
     categoriaPorNome: db.prepare('SELECT * FROM categorias WHERE tipo = ? AND nome = ? COLLATE NOCASE'),
-    inserirCategoria: db.prepare('INSERT INTO categorias (tipo, nome, palavras_chave) VALUES (?, ?, ?)'),
-    atualizarCategoria: db.prepare('UPDATE categorias SET nome = ?, palavras_chave = ? WHERE id = ?'),
+    inserirCategoria: db.prepare('INSERT INTO categorias (tipo, nome, palavras_chave, cor) VALUES (?, ?, ?, ?)'),
+    atualizarCategoria: db.prepare('UPDATE categorias SET nome = ?, palavras_chave = ?, cor = ? WHERE id = ?'),
+    usoCores: db.prepare('SELECT cor, COUNT(*) AS n FROM categorias WHERE tipo = ? GROUP BY cor'),
     removerCategoria: db.prepare('DELETE FROM categorias WHERE id = ?'),
     moverTransacoes: db.prepare('UPDATE transacoes SET categoria = ? WHERE tipo = ? AND categoria = ?'),
     totais: db.prepare(`
@@ -192,6 +210,7 @@ export function criarRepositorio(db) {
         nome: c.nome,
         palavrasChave: separarPalavras(c.palavras_chave),
         fixa: Boolean(c.fixa),
+        cor: c.cor,
         uso: c.uso,
       })),
     // regras pra categorização automática da importação
@@ -202,15 +221,20 @@ export function criarRepositorio(db) {
       return Boolean(existente && existente.id !== ignorarId)
     },
     buscarCategoria: id => sql.categoria.get(id),
-    criarCategoria({ tipo, nome, palavrasChave }) {
-      const { lastInsertRowid } = sql.inserirCategoria.run(tipo, nome, palavrasChave.join(', '))
+    criarCategoria({ tipo, nome, palavrasChave, cor }) {
+      // sem cor escolhida: pega a cor menos usada nesse tipo
+      if (!cor) {
+        const uso = new Map(sql.usoCores.all(tipo).map(l => [l.cor, l.n]))
+        cor = CORES_ROTATIVAS.reduce((melhor, c) => ((uso.get(c) ?? 0) < (uso.get(melhor) ?? 0) ? c : melhor))
+      }
+      const { lastInsertRowid } = sql.inserirCategoria.run(tipo, nome, palavrasChave.join(', '), cor)
       return sql.categoria.get(lastInsertRowid)
     },
     // Renomear também atualiza as transações que usam o nome antigo (tudo ou nada)
-    atualizarCategoria(id, { nome, palavrasChave }) {
+    atualizarCategoria(id, { nome, palavrasChave, cor }) {
       const atual = sql.categoria.get(id)
       emTransacao(() => {
-        sql.atualizarCategoria.run(nome, palavrasChave.join(', '), id)
+        sql.atualizarCategoria.run(nome, palavrasChave.join(', '), cor || atual.cor, id)
         if (atual.nome !== nome) sql.moverTransacoes.run(nome, atual.tipo, atual.nome)
       })
       return sql.categoria.get(id)

@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { formatarMoeda } from '../utils.js'
+import { formatarMoeda, varCor } from '../utils.js'
 
-// Barras horizontais: despesas por categoria. Uma série só → uma cor só (o comprimento já mostra o tamanho).
-export default function GraficoCategorias({ dados }) {
+// Barras horizontais: despesas por categoria, cada uma com a cor da sua categoria.
+// O nome e o valor ficam sempre escritos ao lado, então a cor nunca é a única pista.
+export default function GraficoCategorias({ dados, cores = {} }) {
   const [ativo, setAtivo] = useState(null)
   const total = dados.reduce((s, d) => s + d.total, 0)
   const maximo = Math.max(...dados.map(d => d.total), 0)
@@ -30,9 +31,12 @@ export default function GraficoCategorias({ dados }) {
                 onFocus={() => setAtivo(i)}
                 onBlur={() => setAtivo(null)}
               >
-                <span className="barra-h-rotulo">{d.categoria}</span>
+                <span className="barra-h-rotulo etiqueta-cat">
+                  <i className="ponto-cor" style={{ background: varCor(cores[`despesa:${d.categoria}`]) }} aria-hidden="true" />
+                  {d.categoria}
+                </span>
                 <span className="barra-h-trilho" aria-hidden="true">
-                  <span className="barra-h-preenche" style={{ width: `${(d.total / maximo) * 100}%` }} />
+                  <span className="barra-h-preenche" style={{ width: `${(d.total / maximo) * 100}%`, background: varCor(cores[`despesa:${d.categoria}`]) }} />
                 </span>
                 <span className="barra-h-valor">
                   {formatarMoeda(d.total)}

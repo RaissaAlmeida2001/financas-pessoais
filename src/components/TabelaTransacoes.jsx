@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { formatarData, formatarMoeda } from '../utils.js'
+import { formatarData, formatarMoeda, varCor } from '../utils.js'
 
 const FILTROS = [
   ['todas', 'Todas'],
@@ -7,7 +7,7 @@ const FILTROS = [
   ['despesa', 'Despesas'],
 ]
 
-export default function TabelaTransacoes({ transacoes, onEditar, onRemover }) {
+export default function TabelaTransacoes({ transacoes, cores = {}, onEditar, onRemover }) {
   const [filtro, setFiltro] = useState('todas')
   const visiveis = filtro === 'todas' ? transacoes : transacoes.filter(t => t.tipo === filtro)
 
@@ -43,7 +43,12 @@ export default function TabelaTransacoes({ transacoes, onEditar, onRemover }) {
                 <tr key={t.id}>
                   <td>{formatarData(t.data)}</td>
                   <td>{t.descricao}</td>
-                  <td><span className="etiqueta">{t.categoria}</span></td>
+                  <td>
+                    <span className="etiqueta etiqueta-cat">
+                      <i className="ponto-cor" style={{ background: varCor(cores[`${t.tipo}:${t.categoria}`]) }} aria-hidden="true" />
+                      {t.categoria}
+                    </span>
+                  </td>
                   <td className={`num valor-${t.tipo}`}>
                     {t.tipo === 'receita' ? '+ ' : '− '}{formatarMoeda(t.valor)}
                   </td>

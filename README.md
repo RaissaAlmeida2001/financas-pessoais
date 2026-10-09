@@ -10,7 +10,7 @@ App full-stack para controlar receitas e despesas: lançamentos por categoria, r
 
 - Cadastro, edição e exclusão de receitas e despesas
 - **Importação de extrato bancário (OFX e CSV)** com categorização automática, prévia editável e detecção de duplicadas
-- **Categorias personalizadas**: crie, renomeie e exclua categorias, cada uma com palavras-chave para a importação automática
+- **Categorias personalizadas**: crie, renomeie e exclua categorias, cada uma com **cor própria** e palavras-chave para a importação automática
 - Navegação por mês, com resumo de receitas, despesas e saldo
 - Gráfico de receitas x despesas dos últimos 6 meses (com tooltip e visão em tabela)
 - Despesas por categoria com percentual do total
@@ -77,7 +77,7 @@ Aceita **OFX** (Itaú, Bradesco, Santander, BB, Caixa e a maioria dos bancos) e 
 - **Validação no servidor**, não só no formulário: tipo, categoria compatível, valor positivo com até 2 casas e data real (rejeita 31/02).
 - **Importação atômica**: as transações confirmadas entram numa única transação SQL (`BEGIN`/`COMMIT`), com índice único para impedir duplicadas.
 - **API testável**: o app recebe o repositório por parâmetro, e os testes usam um banco em memória.
-- **Gráficos em SVG feitos à mão**, com paleta validada para daltonismo e tabela alternativa para acessibilidade.
+- **Gráficos em SVG feitos à mão**, com paleta validada para daltonismo e tabela alternativa para acessibilidade. As cores das categorias saem da mesma paleta de 8 cores, e o nome sempre aparece junto, para a cor nunca ser a única pista.
 
 ## Estrutura
 

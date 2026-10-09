@@ -45,3 +45,9 @@ export function escalaY(maximo, divisoes = 4) {
   for (let v = 0; v <= topo + 1e-9; v += passo) passos.push(v)
   return { topo, passos }
 }
+
+export const NOMES_CORES = {
+  azul: 'Azul', laranja: 'Laranja', 'verde-agua': 'Verde-água', amarelo: 'Amarelo', rosa: 'Rosa',
+  verde: 'Verde', violeta: 'Violeta', vermelho: 'Vermelho', cinza: 'Cinza',
+}
+export const varCor = cor => `var(--cat-${cor || 'cinza'})`
