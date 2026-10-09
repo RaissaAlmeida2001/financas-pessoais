@@ -22,6 +22,10 @@ export const api = {
   criar: dados => requisitar('/transacoes', { method: 'POST', body: JSON.stringify(dados) }),
   atualizar: (id, dados) => requisitar(`/transacoes/${id}`, { method: 'PUT', body: JSON.stringify(dados) }),
   remover: id => requisitar(`/transacoes/${id}`, { method: 'DELETE' }),
+  categoriasDetalhes: () => requisitar('/categorias/detalhes'),
+  criarCategoria: dados => requisitar('/categorias', { method: 'POST', body: JSON.stringify(dados) }),
+  atualizarCategoria: (id, dados) => requisitar(`/categorias/${id}`, { method: 'PUT', body: JSON.stringify(dados) }),
+  removerCategoria: id => requisitar(`/categorias/${id}`, { method: 'DELETE' }),
   previaImportacao: conteudo => requisitar('/importacao/previa', { method: 'POST', body: JSON.stringify({ conteudo }) }),
   importar: transacoes => requisitar('/importacao', { method: 'POST', body: JSON.stringify({ transacoes }) }),
 }

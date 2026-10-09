@@ -5,6 +5,10 @@ import { lerValor, lerData, categorizar, lerExtrato } from './importacao.js'
 import { abrirBanco, criarRepositorio } from './db.js'
 import { criarApp } from './app.js'
 
+// as mesmas regras padrão que o banco cria no primeiro uso
+const regras = criarRepositorio(abrirBanco(':memory:')).regrasCategorias()
+const ler = conteudo => lerExtrato(conteudo, regras)
+
 test('lê valores nos formatos brasileiro e americano', () => {
   assert.equal(lerValor('1.234,56'), 1234.56)
   assert.equal(lerValor('-1234.56'), -1234.56)
@@ -24,12 +28,25 @@ test('lê datas em vários formatos e recusa datas impossíveis', () => {
 })
 
 test('categoriza pela descrição', () => {
-  assert.equal(categorizar('UBER *TRIP', 'despesa'), 'Transporte')
-  assert.equal(categorizar('Supermercado Dia', 'despesa'), 'Alimentação')
-  assert.equal(categorizar('DROGASIL 123', 'despesa'), 'Saúde')
-  assert.equal(categorizar('Netflix.com', 'despesa'), 'Lazer')
-  assert.equal(categorizar('Pagamento de salário', 'receita'), 'Salário')
-  assert.equal(categorizar('Transferência recebida', 'receita'), 'Outros')
+  assert.equal(categorizar('UBER *TRIP', 'despesa', regras), 'Transporte')
+  assert.equal(categorizar('Supermercado Dia', 'despesa', regras), 'Alimentação')
+  assert.equal(categorizar('DROGASIL 123', 'despesa', regras), 'Saúde')
+  assert.equal(categorizar('Netflix.com', 'despesa', regras), 'Lazer')
+  assert.equal(categorizar('Pagamento de salário', 'receita', regras), 'Salário')
+  assert.equal(categorizar('Transferência recebida', 'receita', regras), 'Outros')
+})
+
+test('categorização: palavra mais específica vence e palavras curtas são inteiras', () => {
+  // "mercado" (Alimentação) está dentro de "mercadolivre" (Compras)
+  assert.equal(categorizar('MERCADOLIVRE*LOJA', 'despesa', regras), 'Compras')
+  // "uber" e "viagem" não se sobrepõem: vale a ordem das categorias
+  assert.equal(categorizar('Uber viagem', 'despesa', regras), 'Transporte')
+  // "tim" não pode pegar "Timbó"; "bar" não pode pegar "Barbearia"
+  assert.equal(categorizar('Padaria Timbó', 'despesa', regras), 'Alimentação')
+  assert.equal(categorizar('Barbearia do Zé', 'despesa', regras), 'Outros')
+  // regra personalizada
+  const comPets = [{ tipo: 'despesa', nome: 'Pets', palavras: ['petz', 'cobasi'] }, ...regras]
+  assert.equal(categorizar('PETZ SOROCABA', 'despesa', comPets), 'Pets')
 })
 
 const OFX = `OFXHEADER:100
@@ -44,7 +61,7 @@ DATA:OFXSGML
 </BANKTRANLIST></STMTRS></STMTTRNRS></BANKMSGSRSV1></OFX>`
 
 test('lê OFX (Itaú, Bradesco, BB, Caixa...)', () => {
-  const { formato, transacoes } = lerExtrato(OFX)
+  const { formato, transacoes } = ler(OFX)
   assert.equal(formato, 'OFX')
   assert.equal(transacoes.length, 3)
   assert.deepEqual(
@@ -64,7 +81,7 @@ test('lê CSV da conta Nubank', () => {
 02/10/2026,150.00,abc-2,Transferência recebida pelo Pix
 02/10/2026,-8.50,abc-3,Compra no débito - Café
 02/10/2026,-8.50,abc-4,Compra no débito - Café`
-  const { formato, transacoes } = lerExtrato(csv)
+  const { formato, transacoes } = ler(csv)
   assert.equal(formato, 'CSV')
   assert.equal(transacoes.length, 4)
   assert.equal(transacoes[0].categoria, 'Alimentação')
@@ -77,7 +94,7 @@ test('lê CSV da fatura do cartão Nubank (valor positivo = compra)', () => {
   const csv = `date,title,amount
 2026-10-04,Ifood *Restaurante,42.90
 2026-10-06,Pagamento recebido,-500.00`
-  const { transacoes } = lerExtrato(csv)
+  const { transacoes } = ler(csv)
   assert.deepEqual(transacoes.map(t => [t.tipo, t.valor]), [['despesa', 42.9], ['receita', 500]])
 })
 
@@ -87,7 +104,7 @@ Agência 0000 Conta 00000-0
 Data;Histórico;Crédito;Débito;Saldo
 05/10/2026;PIX RECEBIDO;1.000,00;;1.000,00
 06/10/2026;CONTA DE ENERGIA CPFL;;-187,45;812,55`
-  const { transacoes } = lerExtrato(csv)
+  const { transacoes } = ler(csv)
   assert.deepEqual(
     transacoes.map(t => [t.tipo, t.valor, t.categoria]),
     [['receita', 1000, 'Outros'], ['despesa', 187.45, 'Contas']]

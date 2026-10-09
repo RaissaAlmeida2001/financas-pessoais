@@ -8,6 +8,7 @@ import GraficoCategorias from './components/GraficoCategorias.jsx'
 import GraficoEvolucao from './components/GraficoEvolucao.jsx'
 import ModalImportar from './components/ModalImportar.jsx'
 import BotaoTema from './components/BotaoTema.jsx'
+import ModalCategorias from './components/ModalCategorias.jsx'
 
 export default function App() {
   const [mes, setMes] = useState(mesAtual)
@@ -20,10 +21,10 @@ export default function App() {
   const [erro, setErro] = useState('')
   const [importando, setImportando] = useState(false)
   const [aviso, setAviso] = useState('')
+  const [gerenciarCategorias, setGerenciarCategorias] = useState(null) // null | 'receita' | 'despesa'
 
-  useEffect(() => {
-    api.categorias().then(setCategorias).catch(e => setErro(e.message))
-  }, [])
+  const carregarCategorias = useCallback(() => api.categorias().then(setCategorias).catch(e => setErro(e.message)), [])
+  useEffect(() => { carregarCategorias() }, [carregarCategorias])
 
   // Recarrega tudo que depende do mês. Os dados anteriores ficam na tela (mais claros)
   // enquanto os novos chegam, pra não "piscar" o layout.
@@ -90,6 +91,7 @@ export default function App() {
             {mes !== mesAtual() && <button className="botao botao-texto" onClick={() => setMes(mesAtual())}>Hoje</button>}
           </nav>
           <button className="botao botao-primario" onClick={() => { setAviso(''); setImportando(true) }}>Importar extrato</button>
+          <button className="botao" onClick={() => setGerenciarCategorias('despesa')}>Categorias</button>
           <BotaoTema />
         </div>
       </header>
@@ -112,6 +114,7 @@ export default function App() {
             editando={editando}
             onSalvar={salvar}
             onCancelar={() => setEditando(null)}
+            onGerenciarCategorias={setGerenciarCategorias}
           />
           <div className="coluna-graficos">
             <GraficoEvolucao dados={evolucao} mesSelecionado={mes} />
@@ -120,6 +123,13 @@ export default function App() {
           </div>
         </div>
       </main>
+
+      <ModalCategorias
+        aberto={gerenciarCategorias !== null}
+        tipoInicial={gerenciarCategorias ?? 'despesa'}
+        onFechar={() => setGerenciarCategorias(null)}
+        onAlterado={() => { carregarCategorias(); carregar() }}
+      />
 
       <ModalImportar
         aberto={importando}

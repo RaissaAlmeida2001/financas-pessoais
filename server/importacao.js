@@ -1,7 +1,6 @@
 // Leitura de extratos bancários (OFX e CSV) e categorização automática.
 // Tudo roda localmente: o arquivo nunca sai do seu computador.
 import { createHash } from 'node:crypto'
-import { CATEGORIAS } from './db.js'
 
 // ——— utilidades ———
 
@@ -61,46 +60,42 @@ function numerarRepetidas(transacoes) {
 }
 
 // ——— categorização por palavras-chave ———
+// As regras vêm do banco (cada categoria tem suas palavras-chave).
 
-const REGRAS = {
-  despesa: [
-    ['Alimentação', ['mercado', 'supermerc', 'atacad', 'assai', 'carrefour', 'pao de acucar', 'padaria', 'acougue', 'hortifruti', 'ifood', 'rappi', 'restaurante', 'lanchonete', 'burger', 'mcdonald', 'pizza', 'cafe', 'starbucks', 'zé delivery', 'ze delivery']],
-    ['Transporte', ['uber', '99app', '99 pop', 'cabify', 'posto', 'combust', 'shell', 'ipiranga', 'petrobras', 'br mania', 'estaciona', 'pedagio', 'sem parar', 'veloe', 'metro', 'onibus', 'bilhete unico', 'cptm']],
-    ['Moradia', ['aluguel', 'condominio', 'iptu', 'imobiliaria']],
-    ['Contas', ['energia', 'eletric', 'cpfl', 'enel', 'sabesp', 'saae', 'agua', 'gas ', 'comgas', 'internet', 'vivo', 'claro', 'tim ', 'oi ', 'net ', 'telefon', 'celular', 'boleto', 'fatura']],
-    ['Saúde', ['farmacia', 'drogaria', 'droga raia', 'drogasil', 'pague menos', 'hospital', 'clinica', 'laborator', 'consulta', 'dentist', 'odonto', 'unimed', 'amil', 'hapvida', 'academia', 'smart fit', 'smartfit']],
-    ['Educação', ['curso', 'escola', 'faculdade', 'universidade', 'udemy', 'alura', 'coursera', 'livraria', 'livro']],
-    ['Lazer', ['netflix', 'spotify', 'disney', 'prime video', 'hbo', 'max ', 'youtube', 'cinema', 'ingresso', 'show', 'steam', 'playstation', 'xbox', 'bar ', 'viagem', 'hotel', 'airbnb', 'booking']],
-    ['Compras', ['amazon', 'mercado livre', 'mercadolivre', 'shopee', 'shein', 'aliexpress', 'magalu', 'magazine', 'americanas', 'renner', 'riachuelo', 'c&a', 'zara', 'loja']],
-  ],
-  receita: [
-    ['Salário', ['salario', 'folha', 'pagamento de salario', 'proventos', 'remuneracao']],
-    ['Investimentos', ['rendimento', 'resgate', 'dividendo', 'juros', 'cdb', 'tesouro', 'aplicacao']],
-    ['Freelance', ['freela', 'servico prestado', 'nota fiscal']],
-  ],
+// Palavra curta (até 4 letras, ex.: "tim", "bar") precisa ser palavra inteira;
+// palavra maior pode ser começo de palavra ("supermerc" pega "supermercado").
+function casa(texto, palavra) {
+  const p = semAcento(palavra).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const fim = palavra.length <= 4 ? '(?![a-z0-9])' : ''
+  return new RegExp(`(^|[^a-z0-9])${p}${fim}`).test(texto)
 }
 
-export function categorizar(descricao, tipo) {
-  const texto = ` ${semAcento(descricao)} `
-  for (const [categoria, palavras] of REGRAS[tipo] ?? []) {
-    if (palavras.some(p => texto.includes(semAcento(p)))) return categoria
+export function categorizar(descricao, tipo, regras = []) {
+  const texto = semAcento(descricao)
+  const achadas = []
+  for (const r of regras) {
+    if (r.tipo !== tipo) continue
+    for (const p of r.palavras) if (casa(texto, p)) achadas.push({ nome: r.nome, palavra: semAcento(p) })
   }
-  return 'Outros'
+  // se uma palavra achada está dentro de outra também achada ("mercado" em "mercadolivre"),
+  // vale a mais específica; entre as restantes, vale a ordem das categorias
+  const especificas = achadas.filter(a => !achadas.some(b => b.palavra !== a.palavra && b.palavra.includes(a.palavra)))
+  return especificas[0]?.nome ?? 'Outros'
 }
 
-function montar(data, descricao, valorComSinal, fitid) {
+function montar(data, descricao, valorComSinal, fitid, regras) {
   if (!data || !Number.isFinite(valorComSinal) || valorComSinal === 0) return null
   const tipo = valorComSinal > 0 ? 'receita' : 'despesa'
   const desc = (descricao || 'Sem descrição').replace(/\s+/g, ' ').trim().slice(0, 120)
   const t = { data, descricao: desc, valor: Math.round(Math.abs(valorComSinal) * 100) / 100, tipo }
-  t.categoria = categorizar(desc, tipo)
+  t.categoria = categorizar(desc, tipo, regras)
   t.idExterno = idExterno(t, fitid)
   return t
 }
 
 // ——— OFX (padrão da maioria dos bancos brasileiros) ———
 
-export function lerOFX(texto) {
+export function lerOFX(texto, regras) {
   const blocos = texto.match(/<STMTTRN>[\s\S]*?(?=<\/STMTTRN>|<STMTTRN>|<\/BANKTRANLIST>)/gi) ?? []
   const campo = (bloco, tag) => bloco.match(new RegExp(`<${tag}>([^<\\r\\n]*)`, 'i'))?.[1]?.trim()
   return blocos
@@ -108,7 +103,7 @@ export function lerOFX(texto) {
       const memo = campo(b, 'MEMO')
       const nome = campo(b, 'NAME')
       const descricao = memo && nome && !memo.includes(nome) ? `${nome} ${memo}` : memo || nome
-      return montar(lerData(campo(b, 'DTPOSTED')), descricao, lerValor(campo(b, 'TRNAMT')), campo(b, 'FITID'))
+      return montar(lerData(campo(b, 'DTPOSTED')), descricao, lerValor(campo(b, 'TRNAMT')), campo(b, 'FITID'), regras)
     })
     .filter(Boolean)
 }
@@ -148,7 +143,7 @@ function acharColuna(cabecalho, nomes) {
   return i
 }
 
-export function lerCSV(texto) {
+export function lerCSV(texto, regras) {
   const linhas = texto.split(/\r?\n/).filter(l => l.trim())
   if (linhas.length < 2) return { transacoes: [], erro: 'O arquivo está vazio.' }
 
@@ -175,22 +170,21 @@ export function lerCSV(texto) {
     if (col.valor !== -1) valor = lerValor(c[col.valor])
     else valor = (lerValor(c[col.credito]) || 0) - Math.abs(lerValor(c[col.debito]) || 0)
     if (faturaCartao) valor = -valor
-    return montar(lerData(c[col.data]), col.descricao !== -1 ? c[col.descricao] : '', valor)
+    return montar(lerData(c[col.data]), col.descricao !== -1 ? c[col.descricao] : '', valor, undefined, regras)
   }).filter(Boolean)
 
   return { transacoes }
 }
 
-export function lerExtrato(conteudo) {
+export function lerExtrato(conteudo, regras = []) {
   if (typeof conteudo !== 'string' || !conteudo.trim()) return { erro: 'Arquivo vazio.' }
   if (/<OFX>|OFXHEADER/i.test(conteudo)) {
-    const transacoes = numerarRepetidas(lerOFX(conteudo))
+    const transacoes = numerarRepetidas(lerOFX(conteudo, regras))
     return transacoes.length ? { formato: 'OFX', transacoes } : { erro: 'Não encontrei transações nesse OFX.' }
   }
-  const { transacoes, erro } = lerCSV(conteudo)
+  const { transacoes, erro } = lerCSV(conteudo, regras)
   if (erro) return { erro }
   numerarRepetidas(transacoes)
   return transacoes.length ? { formato: 'CSV', transacoes } : { erro: 'Não encontrei transações válidas nesse CSV.' }
 }
 
-export const categoriasValidas = tipo => CATEGORIAS[tipo] ?? []

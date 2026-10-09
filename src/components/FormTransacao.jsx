@@ -4,7 +4,7 @@ import { dataPadrao } from '../utils.js'
 const vazio = mes => ({ tipo: 'despesa', descricao: '', valor: '', categoria: '', data: dataPadrao(mes) })
 
 // Formulário de criar/editar. Quando `editando` tem uma transação, entra no modo edição.
-export default function FormTransacao({ categorias, mes, editando, onSalvar, onCancelar }) {
+export default function FormTransacao({ categorias, mes, editando, onSalvar, onCancelar, onGerenciarCategorias }) {
   const [form, setForm] = useState(() => vazio(mes))
   const [erros, setErros] = useState({})
   const [erroGeral, setErroGeral] = useState('')
@@ -88,7 +88,12 @@ export default function FormTransacao({ categorias, mes, editando, onSalvar, onC
         </div>
 
         <div className="campo">
-          <label htmlFor="campo-categoria">Categoria</label>
+          <div className="rotulo-com-acao">
+            <label htmlFor="campo-categoria">Categoria</label>
+            <button type="button" className="botao botao-texto botao-mini" onClick={() => onGerenciarCategorias(form.tipo)}>
+              + Nova categoria
+            </button>
+          </div>
           <select {...props('categoria')} value={form.categoria} onChange={e => mudar('categoria', e.target.value)}>
             <option value="">Selecione…</option>
             {opcoes.map(c => <option key={c} value={c}>{c}</option>)}

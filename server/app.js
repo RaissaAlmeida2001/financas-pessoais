@@ -1,8 +1,8 @@
 // Rotas da API. Recebe o repositório por parâmetro pra facilitar os testes
 // (nos testes usamos um banco em memória).
 import express from 'express'
-import { CATEGORIAS } from './db.js'
-import { validarTransacao, MES_REGEX } from './validacao.js'
+import { CATEGORIA_FIXA } from './db.js'
+import { validarTransacao, validarCategoria, MES_REGEX } from './validacao.js'
 import { lerExtrato } from './importacao.js'
 
 const MAX_IMPORTACAO = 5000
@@ -34,7 +34,38 @@ export function criarApp(repo) {
     return id
   }
 
-  api.get('/categorias', (_req, res) => res.json(CATEGORIAS))
+  // ——— categorias ———
+  api.get('/categorias', (_req, res) => res.json(repo.nomesCategorias()))
+  api.get('/categorias/detalhes', (_req, res) => res.json(repo.listarCategorias()))
+
+  api.post('/categorias', (req, res) => {
+    const { dados, erros } = validarCategoria(req.body, { exigirTipo: true })
+    if (!erros.nome && repo.nomeEmUso(dados.tipo, dados.nome)) erros.nome = 'Já existe uma categoria com esse nome.'
+    if (Object.keys(erros).length) return res.status(400).json({ erro: 'Dados inválidos.', campos: erros })
+    res.status(201).json(repo.criarCategoria(dados))
+  })
+
+  api.put('/categorias/:id', (req, res) => {
+    const id = lerId(req, res)
+    if (!id) return
+    const atual = repo.buscarCategoria(id)
+    if (!atual) return res.status(404).json({ erro: 'Categoria não encontrada.' })
+    const { dados, erros } = validarCategoria(req.body, { exigirTipo: false })
+    if (atual.fixa && dados.nome !== atual.nome) erros.nome = `A categoria "${CATEGORIA_FIXA}" não pode ser renomeada.`
+    if (!erros.nome && repo.nomeEmUso(atual.tipo, dados.nome, id)) erros.nome = 'Já existe uma categoria com esse nome.'
+    if (Object.keys(erros).length) return res.status(400).json({ erro: 'Dados inválidos.', campos: erros })
+    res.json(repo.atualizarCategoria(id, dados))
+  })
+
+  api.delete('/categorias/:id', (req, res) => {
+    const id = lerId(req, res)
+    if (!id) return
+    const atual = repo.buscarCategoria(id)
+    if (!atual) return res.status(404).json({ erro: 'Categoria não encontrada.' })
+    if (atual.fixa) return res.status(400).json({ erro: `A categoria "${CATEGORIA_FIXA}" não pode ser excluída.` })
+    res.json(repo.removerCategoria(id))
+  })
+
 
   api.get('/transacoes', (req, res) => {
     const mes = exigirMes(req, res)
@@ -44,7 +75,7 @@ export function criarApp(repo) {
   })
 
   api.post('/transacoes', (req, res) => {
-    const { dados, erros } = validarTransacao(req.body)
+    const { dados, erros } = validarTransacao(req.body, repo.nomesCategorias())
     if (Object.keys(erros).length) return res.status(400).json({ erro: 'Dados inválidos.', campos: erros })
     res.status(201).json(repo.criar(dados))
   })
@@ -52,7 +83,7 @@ export function criarApp(repo) {
   api.put('/transacoes/:id', (req, res) => {
     const id = lerId(req, res)
     if (!id) return
-    const { dados, erros } = validarTransacao(req.body)
+    const { dados, erros } = validarTransacao(req.body, repo.nomesCategorias())
     if (Object.keys(erros).length) return res.status(400).json({ erro: 'Dados inválidos.', campos: erros })
     const atualizada = repo.atualizar(id, dados)
     if (!atualizada) return res.status(404).json({ erro: 'Transação não encontrada.' })
@@ -81,7 +112,7 @@ export function criarApp(repo) {
 
   // 1º passo: lê o arquivo e devolve a prévia (nada é salvo ainda)
   api.post('/importacao/previa', (req, res) => {
-    const resultado = lerExtrato(req.body?.conteudo)
+    const resultado = lerExtrato(req.body?.conteudo, repo.regrasCategorias())
     if (resultado.erro) return res.status(400).json({ erro: resultado.erro })
     const transacoes = resultado.transacoes.slice(0, MAX_IMPORTACAO).map(t => ({ ...t, duplicada: repo.jaImportada(t.idExterno) }))
     res.json({ formato: resultado.formato, transacoes, total: resultado.transacoes.length })
@@ -94,8 +125,9 @@ export function criarApp(repo) {
     if (lista.length > MAX_IMPORTACAO) return res.status(400).json({ erro: `Importe no máximo ${MAX_IMPORTACAO} por vez.` })
 
     const validas = []
+    const categorias = repo.nomesCategorias()
     for (const [i, item] of lista.entries()) {
-      const { dados, erros } = validarTransacao(item)
+      const { dados, erros } = validarTransacao(item, categorias)
       if (Object.keys(erros).length) return res.status(400).json({ erro: `Linha ${i + 1}: ${Object.values(erros)[0]}` })
       if (typeof item.idExterno !== 'string' || !/^(ofx|hash):[\w.\-:]{1,120}$/.test(item.idExterno)) {
         return res.status(400).json({ erro: `Linha ${i + 1}: identificador inválido.` })

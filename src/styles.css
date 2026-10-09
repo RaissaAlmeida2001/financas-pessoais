@@ -276,3 +276,19 @@ input[type='checkbox'] { width: 16px; height: 16px; accent-color: var(--destaque
   border: 1px solid var(--positivo); color: var(--positivo); background: var(--superficie);
   border-radius: var(--raio); padding: 8px 8px 8px 14px; margin: 0 0 16px; font-weight: 600;
 }
+
+/* ——— categorias ——— */
+.modal-estreito { width: min(640px, calc(100vw - 32px)); }
+.nova-categoria { background: var(--superficie-2); border-radius: var(--raio); padding: 14px; margin-bottom: 16px; }
+.nova-categoria h3 { margin: 0 0 10px; font-size: .95rem; }
+.editor-categoria { display: grid; gap: 10px; }
+.editor-categoria .campo label small { font-weight: 400; color: var(--texto-mudo); }
+.lista-categorias { list-style: none; margin: 0; padding: 0; }
+.lista-categorias > li { border-bottom: 1px solid var(--grade); padding: 10px 0; }
+.lista-categorias > li:last-child { border-bottom: 0; }
+.linha-categoria { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.linha-categoria-info { display: grid; gap: 4px; min-width: 0; }
+.linha-categoria-info small { color: var(--texto-mudo); }
+.palavras { display: flex; flex-wrap: wrap; gap: 4px; }
+.rotulo-com-acao { display: flex; justify-content: space-between; align-items: center; }
+.botao-mini { font-size: .8rem; padding: 2px 6px; color: var(--destaque); }

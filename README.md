@@ -10,6 +10,7 @@ App full-stack para controlar receitas e despesas: lançamentos por categoria, r
 
 - Cadastro, edição e exclusão de receitas e despesas
 - **Importação de extrato bancário (OFX e CSV)** com categorização automática, prévia editável e detecção de duplicadas
+- **Categorias personalizadas**: crie, renomeie e exclua categorias, cada uma com palavras-chave para a importação automática
 - Navegação por mês, com resumo de receitas, despesas e saldo
 - Gráfico de receitas x despesas dos últimos 6 meses (com tooltip e visão em tabela)
 - Despesas por categoria com percentual do total
@@ -45,6 +46,10 @@ Outros comandos:
 | DELETE | `/api/transacoes/:id` | Remove uma transação |
 | GET | `/api/resumo?mes=AAAA-MM` | Totais do mês e despesas por categoria |
 | GET | `/api/evolucao?ate=AAAA-MM&meses=6` | Receitas e despesas mês a mês |
+| GET | `/api/categorias/detalhes` | Categorias com palavras-chave e quantidade de uso |
+| POST | `/api/categorias` | Cria uma categoria (`{ tipo, nome, palavrasChave }`) |
+| PUT | `/api/categorias/:id` | Renomeia (atualizando as transações) e edita palavras-chave |
+| DELETE | `/api/categorias/:id` | Exclui e move as transações para "Outros" |
 | POST | `/api/importacao/previa` | Lê um extrato (`{ conteudo }`) e devolve a prévia, sem salvar |
 | POST | `/api/importacao` | Salva as transações confirmadas, ignorando as já importadas |
 
@@ -59,7 +64,7 @@ Exemplo de corpo para criar uma transação:
 Aceita **OFX** (Itaú, Bradesco, Santander, BB, Caixa e a maioria dos bancos) e **CSV** (Nubank conta e cartão, Inter, C6 e exportações com colunas de data e valor, separadas por `,` ou `;`).
 
 1. O arquivo é lido no navegador (UTF-8 ou Windows-1252, comum em bancos brasileiros) e enviado só para a API local.
-2. Cada transação recebe uma categoria automática por palavras-chave (ex.: "Uber" → Transporte, "Drogasil" → Saúde).
+2. Cada transação recebe uma categoria automática pelas palavras-chave das categorias (ex.: "Uber" → Transporte, "Drogasil" → Saúde). Palavras curtas precisam ser palavra inteira ("tim" não pega "Timbó") e a mais específica vence ("mercadolivre" → Compras, não Alimentação).
 3. A prévia permite desmarcar linhas e trocar categorias antes de salvar.
 4. Transações já importadas são reconhecidas pelo `FITID` do OFX ou por um hash de data + valor + descrição, então importar o mesmo extrato duas vezes não duplica nada.
 
